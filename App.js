@@ -8,6 +8,18 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import styles from './styles'; // Assuming styles.js is in the same folder
 
+// Simple Custom Header
+const CustomHeader = ({ title, onMenuPress }) => {
+  return (
+    <View style={styles.headerContainer}>
+      <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
+        <Text style={styles.menuButtonText}>☰</Text>
+      </TouchableOpacity>
+      <Text style={styles.headerTitle}>{title}</Text>
+    </View>
+  );
+};
+
 export default function App() {
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
@@ -132,7 +144,6 @@ export default function App() {
     }
   };
 
-  // Load file and parse CSV
   const loadFile = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
@@ -140,23 +151,12 @@ export default function App() {
         copyToCacheDirectory: true,
       });
   
-      // Log the result for debugging
-      console.log('Document Picker Result:', result);
-  
-      // Check if the user selected a file successfully
       if (result.assets && result.assets.length > 0) {
         const fileUri = result.assets[0].uri; // Access the file URI correctly
-        console.log('Loaded File URI:', fileUri); // Log the URI
-  
-        // Read the file content
         const fileContent = await FileSystem.readAsStringAsync(fileUri);
-        console.log('Loaded File Content:', fileContent); // Log the content
-  
-        // Proceed to parse the CSV
         parseCSV(fileContent);
       } else {
         alert('File load canceled or no file selected');
-        console.log('File load canceled.');
       }
     } catch (error) {
       console.error('Error loading file: ', error);
@@ -164,7 +164,6 @@ export default function App() {
     }
   };
 
-  // Parse CSV content and update scannedItems
   const parseCSV = (csvContent) => {
     try {
       const lines = csvContent.split('\n').filter(Boolean);
@@ -184,7 +183,11 @@ export default function App() {
       console.error('Error parsing CSV: ', error);
     }
   };
-  
+
+  const handleMenuPress = () => {
+    Alert.alert('Menu Pressed', 'This will open the menu.');
+  };
+
   if (hasPermission === null) {
     return <Text>Requesting camera permission</Text>;
   }
@@ -196,6 +199,8 @@ export default function App() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaView style={styles.innerContainer}>
+        <CustomHeader title="SimplusScanner" onMenuPress={handleMenuPress} />
+        
         {scanning && (
           <BarCodeScanner
             onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
@@ -253,15 +258,16 @@ export default function App() {
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
               <Text style={styles.modalTitle}>
-                {editingItem ? 'Edit Item Name' : 'Add Item Name'}
+                {editingItem ? 'Edit Item' : 'Add New Item'}
               </Text>
               <TextInput
                 style={styles.input}
-                placeholder="Enter item name"
                 value={newItemName}
                 onChangeText={setNewItemName}
+                placeholder="Enter item name"
               />
-              <Button title={editingItem ? "Save Changes" : "Add Item"} onPress={handleAddItem} />
+              <Button title="Save" onPress={handleAddItem} />
+              <Button title="Cancel" onPress={() => setModalVisible(false)} />
             </View>
           </View>
         </Modal>
