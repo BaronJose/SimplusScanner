@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Text, View, TouchableOpacity, FlatList, SafeAreaView, Modal, TextInput, Button, Alert, TouchableWithoutFeedback } from 'react-native';
+import { Text, View, TouchableOpacity, FlatList, SafeAreaView, Modal, TextInput, Button, Alert } from 'react-native';
 import { Camera } from 'expo-camera';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
@@ -30,6 +30,8 @@ export default function App() {
   const [scannedData, setScannedData] = useState('');
   const [editingItem, setEditingItem] = useState(null);
   const swipeableRefs = useRef(new Map());
+  const [openSwipeableItem, setOpenSwipeableItem] = useState(null); // Track currently open item
+  const [editOverlayVisible, setEditOverlayVisible] = useState(false); // Track edit overlay visibility
 
   useEffect(() => {
     (async () => {
@@ -51,7 +53,7 @@ export default function App() {
         )
       );
     } else {
-      setModalVisible(true);
+      setEditOverlayVisible(true);
     }
   };
 
@@ -69,7 +71,7 @@ export default function App() {
         { key: newKey, name: newItemName, data: scannedData, count: 1 },
       ]);
     }
-    setModalVisible(false);
+    setEditOverlayVisible(false);
     setNewItemName('');
     setEditingItem(null);
   };
@@ -91,7 +93,7 @@ export default function App() {
   const handleEditItem = (item) => {
     setEditingItem(item);
     setNewItemName(item.name);
-    setModalVisible(true);
+    setEditOverlayVisible(true); // Show the edit overlay
   };
 
   const closeSwipeable = (key) => {
@@ -101,22 +103,40 @@ export default function App() {
     }
   };
 
-  const renderRightActions = (item) => (
-    <View style={styles.swipeActions}>
-      <TouchableOpacity
-        style={styles.editButton}
-        onPress={() => handleEditItem(item)}
-      >
-        <Text style={styles.actionText}>Edit</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
-        style={styles.deleteButton}
-        onPress={() => handleDeleteItem(item.key)}
-      >
-        <Text style={styles.actionText}>Delete</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  const renderRightActions = (item) => {
+    const closeCurrentSwipeable = () => {
+      if (openSwipeableItem && openSwipeableItem !== item.key) {
+        const currentSwipeableRef = swipeableRefs.current.get(openSwipeableItem);
+        if (currentSwipeableRef) {
+          currentSwipeableRef.close();
+        }
+      }
+      setOpenSwipeableItem(item.key);
+    };
+
+    return (
+      <View style={styles.swipeActions}>
+        <TouchableOpacity
+          style={styles.editButton}
+          onPress={() => {
+            closeCurrentSwipeable();
+            handleEditItem(item);
+          }}
+        >
+          <Text style={styles.actionText}>Edit</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => {
+            closeCurrentSwipeable();
+            handleDeleteItem(item.key);
+          }}
+        >
+          <Text style={styles.actionText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const generateCSV = (items) => {
     let csvContent = 'Item Name,Barcode,Count\n'; 
@@ -187,14 +207,6 @@ export default function App() {
     Alert.alert('Menu Pressed', 'This will open the menu.');
   };
 
-  const handleOverlayPress = () => {
-    swipeableRefs.current.forEach((ref) => {
-      if (ref) { // Check if ref is not null
-        ref.close();
-      }
-    });
-  };
-
   if (hasPermission === null) {
     return <Text>Requesting camera permission</Text>;
   }
@@ -207,81 +219,62 @@ export default function App() {
     <GestureHandlerRootView style={styles.container}>
       <SafeAreaView style={styles.innerContainer}>
         <CustomHeader title="SimplusScanner" onMenuPress={handleMenuPress} />
+        
+        {scanning && (
+          <BarCodeScanner
+            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+            style={styles.scanner}
+          />
+        )}
 
-        <TouchableWithoutFeedback onPress={handleOverlayPress}>
-          <View style={{ flex: 1 }}> 
-            {scanning && (
-              <BarCodeScanner
-                onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-                style={styles.scanner}
-              />
-            )}
-
-            <FlatList
-              data={scannedItems}
-              renderItem={({ item }) => (
-                <Swipeable
-                  ref={(ref) => swipeableRefs.current.set(item.key, ref)}
-                  renderRightActions={() => renderRightActions(item)}
-                >
-                  <View style={styles.item}>
-                    <Text style={styles.itemText}>Name: {item.name}</Text>
-                    <Text style={styles.itemText}>Barcode: {item.data}</Text>
-                    <Text style={styles.itemText}>Count: {item.count}</Text>
-                  </View>
-                </Swipeable>
-              )}
-              keyExtractor={(item) => item.key}
-            />
-
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={styles.button}
-                onPress={scanning ? handleStopScanning : handleStartScanning}
-              >
-                <Text style={styles.buttonText}>
-                  {scanning ? 'Stop Scanning' : 'Start Scanning'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.clearButton]}
-                onPress={saveCSV}
-              >
-                <Text style={styles.buttonText}>Save to CSV</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.button, styles.loadButton]}
-                onPress={loadFile}
-              >
-                <Text style={styles.buttonText}>Load CSV</Text>
-              </TouchableOpacity>
-            </View>
-
-            <Modal
-              visible={modalVisible}
-              animationType="slide"
-              transparent={true}
+        <FlatList
+          data={scannedItems}
+          renderItem={({ item }) => (
+            <Swipeable
+              ref={(ref) => swipeableRefs.current.set(item.key, ref)}
+              renderRightActions={() => renderRightActions(item)}
             >
-              <View style={styles.modalContainer}>
-                <View style={styles.modalContent}>
-                  <Text style={styles.modalTitle}>
-                    {editingItem ? 'Edit Item' : 'Add New Item'}
-                  </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={newItemName}
-                    onChangeText={setNewItemName}
-                    placeholder="Enter item name"
-                  />
-                  <Button title="Save" onPress={handleAddItem} />
-                  <Button title="Cancel" onPress={() => setModalVisible(false)} />
-                </View>
+              <View style={styles.item}>
+                <Text style={styles.itemText}>Name: {item.name}</Text>
+                <Text style={styles.itemText}>Barcode: {item.data}</Text>
+                <Text style={styles.itemText}>Count: {item.count}</Text>
               </View>
-            </Modal>
+            </Swipeable>
+          )}
+          keyExtractor={(item) => item.key}
+        />
+
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={scanning ? handleStopScanning : handleStartScanning}
+          >
+            <Text style={styles.buttonText}>
+              {scanning ? 'Stop Scanning' : 'Start Scanning'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={saveCSV}>
+            <Text style={styles.buttonText}>Save CSV</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.button} onPress={loadFile}>
+            <Text style={styles.buttonText}>Load CSV</Text>
+          </TouchableOpacity>
+        </View>
+
+        {editOverlayVisible && (
+          <View style={styles.overlayContainer}>
+            <View style={styles.editBox}>
+              <TextInput
+                placeholder="Item Name"
+                value={newItemName}
+                onChangeText={setNewItemName}
+                style={styles.input}
+              />
+              <Button title={editingItem ? 'Edit Item' : 'Add Item'} onPress={handleAddItem} />
+              <Button title="Cancel" onPress={() => setEditOverlayVisible(false)} />
+            </View>
           </View>
-        </TouchableWithoutFeedback>
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
