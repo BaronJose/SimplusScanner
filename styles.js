@@ -17,18 +17,18 @@ export default StyleSheet.create({
     paddingHorizontal: 10,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
+    fontSize: 35, // Adjust header title font size as needed
+    color: '#ffffff', // Set title color
   },
   menuButton: {
-    position: 'absolute',
-    left: 10,
-    top: 15,
+    padding: 15, // Increase padding for easier pressing
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 5, // Add some margin
   },
   menuButtonText: {
-    fontSize: 36,
+    fontSize: 40, // Increase font size for better visibility
+    color: '#ffffff', // Set text color
   },
   scanner: {
     height: 300,
@@ -105,4 +105,26 @@ export default StyleSheet.create({
     marginBottom: 20,
     paddingHorizontal: 10,
   },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', // Semi-transparent background
+  },
+  modalContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  modalText: {
+    marginVertical: 10,
+    textAlign: 'center',
+  },
+
 });
