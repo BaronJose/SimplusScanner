@@ -6,18 +6,53 @@ import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler'
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
+import { Appbar, Menu, PaperProvider, Provider } from 'react-native-paper';  // Import Provider
 import styles from './styles'; // Assuming styles.js is in the same folder
+import * as Haptics from 'expo-haptics';
 
-// Simple Custom Header
-const CustomHeader = ({ title, onMenuPress }) => {
+// Custom Header
+const CustomHeader = ({ title, onSaveCSV, onLoadCSV }) => {
+  const [menuVisible, setMenuVisible] = useState(false);
+
+  const openMenu = () => setMenuVisible(true);
+  const closeMenu = () => setMenuVisible(false);
+
   return (
-    <View style={styles.headerContainer}>
-      <TouchableOpacity onPress={onMenuPress} style={styles.menuButton}>
-        <Text style={styles.menuButtonText}>☰</Text>
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>{title}</Text>
-    </View>
+    <Appbar.Header style={styles.headerContainer}>
+      <Menu
+        visible={menuVisible}
+        onDismiss={closeMenu}
+        anchor={
+          <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+            <Text style={styles.menuButtonText}>☰</Text>
+          </TouchableOpacity>
+        }
+      >
+        <Menu.Item
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Haptic feedback for save
+            onSaveCSV(); // Call save function
+            closeMenu(); // Close the menu
+          }}
+          title="Save to CSV"
+        />
+        <Menu.Item
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Haptic feedback for load
+            onLoadCSV(); // Call load function
+            closeMenu(); // Close the menu
+          }}
+          title="Load CSV"
+        />
+      </Menu>
+      <Appbar.Content title={title} titleStyle={styles.headerTitle} />
+    </Appbar.Header>
   );
+};
+const handleMenuPress = () => {
+  console.log("Menu button pressed!");
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Trigger haptic feedback
+  // Add any additional logic you want here
 };
 
 export default function App() {
@@ -30,14 +65,14 @@ export default function App() {
   const [scannedData, setScannedData] = useState('');
   const [editingItem, setEditingItem] = useState(null);
   const swipeableRefs = useRef(new Map());
-  const [openSwipeableItem, setOpenSwipeableItem] = useState(null); // Track currently open item
-  const [editOverlayVisible, setEditOverlayVisible] = useState(false); // Track edit overlay visibility
+  const [openSwipeableItem, setOpenSwipeableItem] = useState(null);
+  const [editOverlayVisible, setEditOverlayVisible] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
+      (async () => {
+          const { status } = await Camera.requestCameraPermissionsAsync();
+          setHasPermission(status === 'granted');
+      })();
   }, []);
 
   const handleBarCodeScanned = ({ type, data }) => {
@@ -203,79 +238,87 @@ export default function App() {
     }
   };
 
-  const handleMenuPress = () => {
-    Alert.alert('Menu Pressed', 'This will open the menu.');
-  };
+  
 
   if (hasPermission === null) {
     return <Text>Requesting camera permission</Text>;
-  }
+}
 
-  if (hasPermission === false) {
+if (hasPermission === false) {
     return <Text>No access to camera</Text>;
-  }
+}
 
-  return (
-    <GestureHandlerRootView style={styles.container}>
-      <SafeAreaView style={styles.innerContainer}>
-        <CustomHeader title="SimplusScanner" onMenuPress={handleMenuPress} />
-        
-        {scanning && (
-          <BarCodeScanner
-            onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
-            style={styles.scanner}
-          />
-        )}
-
-        <FlatList
-          data={scannedItems}
-          renderItem={({ item }) => (
-            <Swipeable
-              ref={(ref) => swipeableRefs.current.set(item.key, ref)}
-              renderRightActions={() => renderRightActions(item)}
-            >
-              <View style={styles.item}>
-                <Text style={styles.itemText}>Name: {item.name}</Text>
-                <Text style={styles.itemText}>Barcode: {item.data}</Text>
-                <Text style={styles.itemText}>Count: {item.count}</Text>
-              </View>
-            </Swipeable>
-          )}
-          keyExtractor={(item) => item.key}
-        />
-
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={scanning ? handleStopScanning : handleStartScanning}
-          >
-            <Text style={styles.buttonText}>
-              {scanning ? 'Stop Scanning' : 'Start Scanning'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={saveCSV}>
-            <Text style={styles.buttonText}>Save CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.button} onPress={loadFile}>
-            <Text style={styles.buttonText}>Load CSV</Text>
-          </TouchableOpacity>
-        </View>
-
-        {editOverlayVisible && (
-          <View style={styles.overlayContainer}>
-            <View style={styles.editBox}>
-              <TextInput
-                placeholder="Item Name"
-                value={newItemName}
-                onChangeText={setNewItemName}
-                style={styles.input}
+return (
+  <PaperProvider>
+      <GestureHandlerRootView style={styles.container}>
+          <SafeAreaView style={styles.innerContainer}>
+              <CustomHeader
+                  title="SimplusScanner"
+                  onSaveCSV={saveCSV}
+                  onLoadCSV={loadFile}
               />
-              <Button title={editingItem ? 'Edit Item' : 'Add Item'} onPress={handleAddItem} />
-              <Button title="Cancel" onPress={() => setEditOverlayVisible(false)} />
-            </View>
-          </View>
-        )}
-      </SafeAreaView>
-    </GestureHandlerRootView>
-  );
+              
+              {scanning && (
+                  <BarCodeScanner
+                      onBarCodeScanned={scanned ? undefined : handleBarCodeScanned}
+                      style={styles.scanner}
+                  />
+              )}
+
+              <FlatList
+                  data={scannedItems}
+                  renderItem={({ item }) => (
+                      <Swipeable
+                          ref={(ref) => swipeableRefs.current.set(item.key, ref)}
+                          renderRightActions={() => renderRightActions(item)}
+                      >
+                          <View style={styles.item}>
+                              <Text style={styles.itemText}>Name: {item.name}</Text>
+                              <Text style={styles.itemText}>Barcode: {item.data}</Text>
+                              <Text style={styles.itemText}>Count: {item.count}</Text>
+                          </View>
+                      </Swipeable>
+                  )}
+                  keyExtractor={(item) => item.key}
+              />
+
+              <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                      style={styles.button}
+                      onPress={scanning ? handleStopScanning : handleStartScanning}
+                  >
+                      <Text style={styles.buttonText}>
+                          {scanning ? 'Stop Scanning' : 'Start Scanning'}
+                      </Text>
+                  </TouchableOpacity>
+                  {!scanning && (
+                      <>
+                          <TouchableOpacity style={styles.button} onPress={saveCSV}>
+                              <Text style={styles.buttonText}>Save CSV</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.button} onPress={loadFile}>
+                              <Text style={styles.buttonText}>Load CSV</Text>
+                          </TouchableOpacity>
+                      </>
+                  )}
+              </View>
+
+              {editOverlayVisible && (
+                  <View style={styles.overlayContainer}>
+                      <View style={styles.editBox}>
+                          <TextInput
+                              placeholder="Item Name"
+                              value={newItemName}
+                              onChangeText={setNewItemName}
+                              style={styles.input}
+                          />
+                          <Button title={editingItem ? 'Edit Item' : 'Add Item'} onPress={handleAddItem} />
+                          <Button title="Cancel" onPress={() => setEditOverlayVisible(false)} />
+                      </View>
+                  </View>
+              )}
+          </SafeAreaView>
+      </GestureHandlerRootView>
+  </PaperProvider>
+);
 }
