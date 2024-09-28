@@ -23,14 +23,17 @@ const CustomHeader = ({ title, onSaveCSV, onLoadCSV }) => {
         visible={menuVisible}
         onDismiss={closeMenu}
         anchor={
-          <TouchableOpacity onPress={openMenu} style={styles.menuButton}>
+          <TouchableOpacity onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Add haptic feedback here
+            openMenu(); // Open the menu
+        }} style={styles.menuButton}>
             <Text style={styles.menuButtonText}>☰</Text>
-          </TouchableOpacity>
+        </TouchableOpacity>
         }
       >
         <Menu.Item
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Haptic feedback for save
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Haptic feedback for save
             onSaveCSV(); // Call save function
             closeMenu(); // Close the menu
           }}
@@ -38,7 +41,7 @@ const CustomHeader = ({ title, onSaveCSV, onLoadCSV }) => {
         />
         <Menu.Item
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Haptic feedback for load
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);; // Haptic feedback for load
             onLoadCSV(); // Call load function
             closeMenu(); // Close the menu
           }}
@@ -51,7 +54,7 @@ const CustomHeader = ({ title, onSaveCSV, onLoadCSV }) => {
 };
 const handleMenuPress = () => {
   console.log("Menu button pressed!");
-  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); // Trigger haptic feedback
+  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); // Trigger haptic feedback
   // Add any additional logic you want here
 };
 
